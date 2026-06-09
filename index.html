@@ -41,16 +41,16 @@
 </div>
 
 <script>
-    // Configuration des identifiants Google Drive et Google Sheets
     const GOOGLE_SHEETS_ID = "1oMpUNFcGBVIGvh8FdXMAyaVMXiI6Is7t1DWOuJiP6vQ";
     const GOOGLE_DRIVE_PHOTO_ID = "1q9Brj02X1sijVFzOFro60M6gu1a9oJO-";
 
-    // Chargement de la photo
+    // Chargement de la photo de couple
     document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
 
-    // Fonction de nettoyage ultime (Minuscules et suppression des espaces)
+    // Fonction de nettoyage des saisies (minuscules, sans espaces)
     function nettoyerTexte(texte) {
-        return texte.toLowerCase().replace(/\s+/g, '');
+        if (!texte) return "";
+        return texte.toLowerCase().trim().replace(/\s+/g, '');
     }
 
     async function rechercherTable() {
@@ -71,31 +71,30 @@
             const response = await fetch(url);
             const data = await response.text();
             
-            // Découpage des lignes du CSV
-            const lignes = data.split('\n');
+            // Séparation par ligne
+            const lignes = data.split(/\r?\n/);
             let correspondances = [];
 
-            // On commence la boucle à i = 1 pour sauter la ligne des en-têtes
+            // Parcours à partir de la ligne 2 (index 1) pour ignorer les en-têtes génériques
             for(let i = 1; i < lignes.length; i++) {
-                if (!lignes[i].trim()) continue;
+                let ligneTexte = lignes[i].trim();
+                if (!ligneTexte) continue;
 
-                // Détection du séparateur de colonnes (point-virgule ou virgule)
-                const separateur = lignes[i].includes(';') ? ';' : ',';
+                // Forçage du séparateur français (point-virgule) ou repli sur la virgule
+                const separateur = ligneTexte.includes(';') ? ';' : ',';
                 
-                // Découpage des colonnes de la ligne actuelle
-                const colonnes = lignes[i].split(separateur);
+                // Découpage des colonnes
+                const colonnes = ligneTexte.split(separateur);
                 
-                // Correspondance stricte avec vos colonnes fixes :
-                // Colonne E = index 4 | Colonne F = index 5 | Colonne K = index 10
-                let nExcel = colonnes[4] ? colonnes[4].replace(/["']/g, '').trim() : "";
-                let pExcel = colonnes[5] ? colonnes[5].replace(/["']/g, '').trim() : "";
-                let tExcel = colonnes[10] ? colonnes[10].replace(/["']/g, '').trim() : "";
+                // Nettoyage complet des guillemets encadrant parfois les textes dans le CSV
+                let nExcel = colonnes[4] ? colonnes[4].replace(/^["']|["']$/g, '').trim() : ""; // Colonne E
+                let pExcel = colonnes[5] ? colonnes[5].replace(/^["']|["']$/g, '').trim() : ""; // Colonne F
+                let tExcel = colonnes[10] ? colonnes[10].replace(/^["']|["']$/g, '').trim() : ""; // Colonne K
 
-                // Si la ligne ne contient ni nom ni prénom valides, on l'ignore
                 if (!nExcel || !pExcel) continue;
 
                 let pExcelNettoye = nettoyerTexte(pExcel);
-                let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); 
+                let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); // Enlève aussi les tirets pour la recherche
                 
                 let matchPrenom = (prenomSaisi === pExcelNettoye);
                 let matchNom = (nomSaisi === nExcelNettoye || nExcelNettoye.includes(nomSaisi));
