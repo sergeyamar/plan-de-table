@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Balises Anti-Cache : Force le navigateur à recharger le site à chaque visite -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>Trouve Ta Table - Notre Mariage / Trova Il Tuo Tavolo - Il Nostro Matrimonio</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f6f0; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -25,7 +31,7 @@
         
         /* Styles pour les compagnons de table */
         .guests-together { margin-top: 20px; border-top: 1px dashed #ddd; padding-top: 15px; text-align: left; }
-        .guests-together-title { font-size: 15px; font-weight: bold; color: #555; text-align: center; margin-bottom: 10px; font-family: sans-serif; }
+        .guests-together-title { font-size: 15px; font-weight: bold; color: #555; text-align: center; margin-bottom: 10px; font-family: sans-serif; line-height: 1.4; }
         .guest-chip { display: inline-block; background: #f1ede4; color: #555; padding: 6px 12px; margin: 4px; border-radius: 20px; font-size: 14px; font-family: sans-serif; }
     </style>
 </head>
@@ -66,7 +72,6 @@
         });
     }
 
-    // Découpeur de ligne CSV standardisé et ultra-fiable
     function parseCSVLine(text) {
         let columns = [];
         let curVal = "";
@@ -75,7 +80,7 @@
         for (let i = 0; i < text.length; i++) {
             let char = text[i];
             if (char === '"') {
-                inQuotes = !inQuotes; // On ignore les virgules si on est entre guillemets
+                inQuotes = !inQuotes;
             } else if (char === ',' && !inQuotes) {
                 columns.push(curVal.trim());
                 curVal = "";
@@ -100,7 +105,6 @@
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
         const cacheBuster = new Date().getTime();
-        // On force l'export en CSV avec la virgule comme séparateur standard
         const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&t=${cacheBuster}`;
 
         try {
@@ -108,10 +112,9 @@
             const data = await response.text();
             const lignes = data.split(/\r?\n/);
             
-            // Index fixes et vérifiés sur votre fichier d'origine
-            const indexNom = 4;    // Colonne E
-            const indexPrenom = 5; // Colonne F
-            const indexTable = 10; // Colonne K
+            const indexNom = 4;    
+            const indexPrenom = 5; 
+            const indexTable = 10; 
             
             let correspondances = [];
             let tousLesInvites = [];
@@ -120,19 +123,16 @@
                 let ligneTexte = lignes[i].trim();
                 if (!ligneTexte) continue;
 
-                // On utilise le découpeur standardisé à la virgule
                 const colonnes = parseCSVLine(ligneTexte);
                 
                 let nomExcel = colonnes[indexNom] ? colonnes[indexNom].trim() : "";
                 let prenomExcel = colonnes[indexPrenom] ? colonnes[indexPrenom].trim() : "";
                 let tableTrouvee = colonnes[indexTable] ? colonnes[indexTable].trim() : "";
 
-                // Si la ligne est corrompue ou trop courte, on passe
                 if (colonnes.length <= indexTable) {
                     continue;
                 }
 
-                // Si l'invité n'a pas de table définie, on l'ignore
                 if (!tableTrouvee || tableTrouvee.toLowerCase() === "undefined" || tableTrouvee === "") {
                     continue;
                 }
@@ -170,7 +170,7 @@
                         <div class="guests-together">
                             <div class="guests-together-title">
                                 Vous êtes à la même table que :<br>
-                                <span style="font-style: italic; font-weight: normal; color: #888; font-size: 13px;">Siete al tavolo con :</span>
+                                Siete al tavolo con :
                             </div>
                             <div style="text-align: center;">
                     `;
@@ -188,7 +188,7 @@
                     ${htmlCompagnons}`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
