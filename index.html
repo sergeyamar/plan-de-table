@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trouve Ta Table - Notre Mariage / Trova Il Tuo Tavolo - Il Nostro Matrimonio</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f6f0; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 420px; text-align: center; position: relative; border: 1px solid #eee; }
+        h1 { color: #4a4a4a; font-size: 26px; font-family: 'Georgia', serif; margin-bottom: 5px; }
+        .subtitle { color: #8a8a8a; font-style: italic; margin-bottom: 20px; }
+        .couple-photo { width: 100%; max-height: 250px; object-fit: cover; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input, button { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; transition: all 0.3s; }
+        input:focus { border-color: #d4af37; outline: none; box-shadow: 0 0 5px rgba(212, 175, 55, 0.5); }
+        button { background-color: #d4af37; color: white; border: none; font-weight: bold; cursor: pointer; letter-spacing: 1px; }
+        button:hover { background-color: #aa8c2c; }
+        .result { margin-top: 25px; font-size: 18px; color: #333; text-align: left; }
+        .single-match { text-align: center; font-family: 'Georgia', serif; font-size: 22px; }
+        .table-name { color: #d4af37; font-size: 26px; display: block; margin-top: 5px; font-weight: bold; }
+        .loading { font-size: 14px; color: #8a8a8a; text-align: center; display: block; margin-top: 10px; }
+        
+        /* Style pour l'affichage de listes multiples */
+        .match-item { background: #fdfbf7; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #d4af37; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .match-name { font-weight: bold; color: #4a4a4a; }
+        .match-table { color: #aa8c2c; font-style: italic; font-size: 15px; }
+        .multi-title { font-size: 16px; color: #666; margin-bottom: 10px; font-style: italic; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bienvenue à notre Mariage<br><span style="font-size: 18px; font-family: sans-serif; color: #8a8a8a;">Benvenuti al nostro Matrimonio</span></h1>
+    <div class="subtitle">Trouvez votre table / Trova il tuo tavolo</div>
+    
+    <img class="couple-photo" id="photo-couple" src="" alt="Notre Couple">
+
+    <input type="text" id="search-firstname" placeholder="Votre Prénom / Nome">
+    <input type="text" id="search-lastname" placeholder="Votre Nom / Cognome">
+    <button onclick="rechercherTable()">Rechercher ma table / Cerca il mio tavolo</button>
+    <div class="result" id="resultat"></div>
+</div>
+
+<script>
+    // Configuration des identifiants Google Drive et Google Sheets
+    const GOOGLE_SHEETS_ID = "1oMpUNFcGBVIGvh8FdXMAyaVMXiI6Is7t1DWOuJiP6vQ";
+    const GOOGLE_DRIVE_PHOTO_ID = "1q9Brj02X1sijVFzOFro60M6gu1a9oJO-";
+
+    // Chargement de la photo
+    document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
+
+    // Fonction de nettoyage (Minuscules et suppression des espaces)
+    function nettoyerTexte(texte) {
+        return texte.toLowerCase().replace(/\s+/g, '');
+    }
+
+    async function rechercherTable() {
+        const prenomSaisi = nettoyerTexte(document.getElementById('search-firstname').value);
+        const nomSaisi = nettoyerTexte(document.getElementById('search-lastname').value);
+        const divResultat = document.getElementById('resultat');
+        
+        if(!prenomSaisi && !nomSaisi) {
+            divResultat.innerHTML = "<div style='color:#e74c3c; font-size:16px; text-align:center;'>Veuillez entrer un prénom ou un nom. / Per favore, inserisci un nome o un cognome.</div>";
+            return;
+        }
+
+        divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
+
+        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.text();
+            
+            const lignes = data.split('\n').map(ligne => ligne.split(','));
+            
+            // Nettoyage des en-têtes du fichier CSV (minuscules, retrait des espaces et des guillemets éventuels)
+            const entetes = lignes[0].map(e => e.trim().toLowerCase().replace(/["']/g, ''));
+            
+            // Correspondance avec vos nouvelles colonnes : "Prénom", "Nom", "Nom de table"
+            const idxPrenom = entetes.indexOf('prénom');
+            const idxNom = entetes.indexOf('nom');
+            const idxTable = entetes.indexOf('nom de table');
+
+            if(idxPrenom === -1 || idxNom === -1 || idxTable === -1) {
+                divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur de configuration des colonnes Excel (Vérifiez les noms Nom, Prénom et Nom de table).</span>";
+                return;
+            }
+
+            let correspondances = [];
+
+            for(let i = 1; i < lignes.length; i++) {
+                if (!lignes[i][idxPrenom] || !lignes[i][idxNom]) continue;
+                
+                let pExcel = lignes[i][idxPrenom].replace(/["']/g, '').trim();
+                let nExcel = lignes[i][idxNom].replace(/["']/g, '').trim();
+                let tExcel = lignes[i][idxTable].replace(/["']/g, '').trim();
+
+                let pExcelNettoye = nettoyerTexte(pExcel);
+                let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); 
+                
+                let matchPrenom = (prenomSaisi === pExcelNettoye);
+                let matchNom = (nomSaisi === nExcelNettoye || nExcelNettoye.includes(nomSaisi));
+
+                if (prenomSaisi && nomSaisi) {
+                    if (matchPrenom && matchNom) {
+                        correspondances.push({ prenom: pExcel, nom: nExcel, table: tExcel });
+                    }
+                } else if (prenomSaisi && !nomSaisi) {
+                    if (matchPrenom) {
+                        correspondances.push({ prenom: pExcel, nom: nExcel, table: tExcel });
+                    }
+                } else if (!prenomSaisi && nomSaisi) {
+                    if (matchNom) {
+                        correspondances.push({ prenom: pExcel, nom: nExcel, table: tExcel });
+                    }
+                }
+            }
+
+            // --- AFFICHAGE DES RÉSULTATS ---
+            if (correspondances.length === 0) {
+                divResultat.innerHTML = "<div style='text-align:center;'>❌ Aucun invité trouvé. / Nessun ospite trovato.</div>";
+            } 
+            else if (correspondances.length === 1) {
+                divResultat.innerHTML = `
+                    <div class="single-match">
+                        ✨ ${correspondances[0].prenom} ${correspondances[0].nom},<br> vous êtes à la : / siete au :
+                        <span class="table-name">${correspondances[0].table}</span>
+                    </div>`;
+            } 
+            else {
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
+                correspondances.forEach(invite => {
+                    htmlListe += `
+                        <div class="match-item">
+                            <span class="match-name">${invite.prenom} ${invite.nom}</span>
+                            <span class="match-table">➔ ${invite.table}</span>
+                        </div>`;
+                });
+                divResultat.innerHTML = htmlListe;
+            }
+
+        } catch (error) {
+            console.error(error);
+            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur lors de la connexion au fichier Excel. Vérifiez le partage du lien.</span>";
+        }
+    }
+</script>
+</body>
+</html>
