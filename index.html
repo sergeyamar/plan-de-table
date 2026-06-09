@@ -48,7 +48,7 @@
     // Chargement de la photo
     document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
 
-    // Fonction de nettoyage (Minuscules et suppression des espaces)
+    // Fonction de nettoyage ultime (Minuscules et suppression des espaces)
     function nettoyerTexte(texte) {
         return texte.toLowerCase().replace(/\s+/g, '');
     }
@@ -71,29 +71,28 @@
             const response = await fetch(url);
             const data = await response.text();
             
-            const lignes = data.split('\n').map(ligne => ligne.split(','));
-            
-            // Nettoyage des en-têtes du fichier CSV (minuscules, retrait des espaces et des guillemets éventuels)
-            const entetes = lignes[0].map(e => e.trim().toLowerCase().replace(/["']/g, ''));
-            
-            // Correspondance avec vos nouvelles colonnes : "Prénom", "Nom", "Nom de table"
-            const idxPrenom = entetes.indexOf('prénom');
-            const idxNom = entetes.indexOf('nom');
-            const idxTable = entetes.indexOf('nom de table');
-
-            if(idxPrenom === -1 || idxNom === -1 || idxTable === -1) {
-                divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur de configuration des colonnes Excel (Vérifiez les noms Nom, Prénom et Nom de table).</span>";
-                return;
-            }
-
+            // Découpage des lignes du CSV
+            const lignes = data.split('\n');
             let correspondances = [];
 
+            // On commence la boucle à i = 1 pour sauter la ligne des en-têtes
             for(let i = 1; i < lignes.length; i++) {
-                if (!lignes[i][idxPrenom] || !lignes[i][idxNom]) continue;
+                if (!lignes[i].trim()) continue;
+
+                // Détection du séparateur de colonnes (point-virgule ou virgule)
+                const separateur = lignes[i].includes(';') ? ';' : ',';
                 
-                let pExcel = lignes[i][idxPrenom].replace(/["']/g, '').trim();
-                let nExcel = lignes[i][idxNom].replace(/["']/g, '').trim();
-                let tExcel = lignes[i][idxTable].replace(/["']/g, '').trim();
+                // Découpage des colonnes de la ligne actuelle
+                const colonnes = lignes[i].split(separateur);
+                
+                // Correspondance stricte avec vos colonnes fixes :
+                // Colonne E = index 4 | Colonne F = index 5 | Colonne K = index 10
+                let nExcel = colonnes[4] ? colonnes[4].replace(/["']/g, '').trim() : "";
+                let pExcel = colonnes[5] ? colonnes[5].replace(/["']/g, '').trim() : "";
+                let tExcel = colonnes[10] ? colonnes[10].replace(/["']/g, '').trim() : "";
+
+                // Si la ligne ne contient ni nom ni prénom valides, on l'ignore
+                if (!nExcel || !pExcel) continue;
 
                 let pExcelNettoye = nettoyerTexte(pExcel);
                 let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); 
@@ -128,7 +127,7 @@
                     </div>`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
