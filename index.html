@@ -42,33 +42,11 @@
     const GOOGLE_SHEETS_ID = "1oMpUNFcGBVIGvh8FdXMAyaVMXiI6Is7t1DWOuJiP6vQ";
     const GOOGLE_DRIVE_PHOTO_ID = "1q9Brj02X1sijVFzOFro60M6gu1a9oJO-";
 
-    // Chargement de la photo
     document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
 
     function nettoyerTexte(texte) {
         if (!texte) return "";
-        return texte.toLowerCase().trim().replace(/\s+/g, '');
-    }
-
-    // Fonction avancée pour découper proprement une ligne CSV (gère les guillemets et points-virgules)
-    function parseCSVLine(text, separator) {
-        let columns = [];
-        let curVal = "";
-        let inQuotes = false;
-        
-        for (let i = 0; i < text.length; i++) {
-            let char = text[i];
-            if (char === '"' || char === "'") {
-                inQuotes = !inQuotes;
-            } else if (char === separator && !inQuotes) {
-                columns.push(curVal.trim());
-                curVal = "";
-            } else {
-                curVal += char;
-            }
-        }
-        columns.push(curVal.trim());
-        return columns;
+        return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
     }
 
     async function rechercherTable() {
@@ -83,49 +61,38 @@
 
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
-        // Lien de secours public standard sans clé API
         const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv`;
 
         try {
             const response = await fetch(url);
             const data = await response.text();
+            
+            // Séparation par ligne complète
             const lignes = data.split(/\r?\n/);
-
             let correspondances = [];
 
             for(let i = 1; i < lignes.length; i++) {
-                let ligneActuelle = lignes[i].trim();
-                if (!ligneActuelle) continue;
+                let ligneTexte = lignes[i].trim();
+                if (!ligneTexte) continue;
 
-                // Détection dynamique du séparateur (souvent ; en France, parfois ,)
-                const separateur = ligneActuelle.includes(';') ? ';' : ',';
-                const colonnes = parseCSVLine(ligneActuelle, separateur);
-                
-                // Positionnement exact (Index informatique : E=4, F=5, K=10)
-                let nExcel = colonnes[4] || ""; 
-                let pExcel = colonnes[5] || ""; 
-                let tExcel = colonnes[10] || ""; 
+                // Nettoyage de la ligne entière (on enlève les guillemets et on passe en minuscules)
+                let ligneNettoye = ligneTexte.toLowerCase().replace(/["']/g, '');
 
-                if (!nExcel || !pExcel) continue;
+                // Vérification si le prénom ET le nom sont présents quelque part dans cette ligne
+                let contientPrenom = prenomSaisi ? ligneNettoye.includes(prenomSaisi) : true;
+                let contientNom = nomSaisi ? ligneNettoye.includes(nomSaisi) : true;
 
-                let pExcelNettoye = nettoyerTexte(pExcel);
-                let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); 
-                
-                let matchPrenom = (prenomSaisi === pExcelNettoye);
-                let matchNom = (nomSaisi === nExcelNettoye || nExcelNettoye.includes(nomSaisi));
+                if (contientPrenom && contientNom) {
+                    // On découpe proprement pour récupérer la table (dernière colonne remplie)
+                    const separateur = ligneTexte.includes(';') ? ';' : ',';
+                    const colonnes = ligneTexte.split(separateur);
+                    
+                    // Nettoyage des valeurs pour l'affichage
+                    let tableTrouvee = colonnes[colonnes.length - 1] ? colonnes[colonnes.length - 1].replace(/["']/g, '').trim() : "Non définie";
+                    let prenomTrouve = prenomSaisi ? document.getElementById('search-firstname').value : "";
+                    let nomTrouve = nomSaisi ? document.getElementById('search-lastname').value : "";
 
-                if (prenomSaisi && nomSaisi) {
-                    if (matchPrenom && matchNom) {
-                        correspondances.push({ prenom: pExcel, nom: nExcel, table: tExcel });
-                    }
-                } else if (prenomSaisi && !nomSaisi) {
-                    if (matchPrenom) {
-                        correspondances.push({ prenom: pExcel, nom: nExcel, table: tExcel });
-                    }
-                } else if (!prenomSaisi && nomSaisi) {
-                    if (matchNom) {
-                        correspondances.push({ prenom: pExcel, nom: nExcel, table: tExcel });
-                    }
+                    correspondances.push({ prenom: prenomTrouve, nom: nomTrouve, table: tableTrouvee });
                 }
             }
 
@@ -141,7 +108,7 @@
                     </div>`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
@@ -154,7 +121,7 @@
 
         } catch (error) {
             console.error(error);
-            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur d'accès au tableau. Assurez-vous qu'il est bien \"Publié sur le web\".</span>";
+            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur d'accès au fichier.</span>";
         }
     }
 </script>
