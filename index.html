@@ -39,9 +39,7 @@
 </div>
 
 <script>
-    // Configuration de vos identifiants officiels
     const GOOGLE_SHEETS_ID = "1oMpUNFcGBVIGvh8FdXMAyaVMXiI6Is7t1DWOuJiP6vQ";
-    const API_KEY = "AQ.Ab8RN6I__C8BxERsNYCFtNDMAkHAhtCJLmoQZ18314TksyXwlw";
     const GOOGLE_DRIVE_PHOTO_ID = "1q9Brj02X1sijVFzOFro60M6gu1a9oJO-";
 
     // Chargement de la photo
@@ -50,6 +48,27 @@
     function nettoyerTexte(texte) {
         if (!texte) return "";
         return texte.toLowerCase().trim().replace(/\s+/g, '');
+    }
+
+    // Fonction avancée pour découper proprement une ligne CSV (gère les guillemets et points-virgules)
+    function parseCSVLine(text, separator) {
+        let columns = [];
+        let curVal = "";
+        let inQuotes = false;
+        
+        for (let i = 0; i < text.length; i++) {
+            let char = text[i];
+            if (char === '"' || char === "'") {
+                inQuotes = !inQuotes;
+            } else if (char === separator && !inQuotes) {
+                columns.push(curVal.trim());
+                curVal = "";
+            } else {
+                curVal += char;
+            }
+        }
+        columns.push(curVal.trim());
+        return columns;
     }
 
     async function rechercherTable() {
@@ -64,29 +83,28 @@
 
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
-        // Requête API ciblant la plage globale du tableau (de A à K)
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_ID}/values/A:K?key=${API_KEY}`;
+        // Lien de secours public standard sans clé API
+        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv`;
 
         try {
             const response = await fetch(url);
-            const json = await response.json();
-            const lignes = json.values;
-
-            if (!lignes || lignes.length === 0) {
-                divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Impossible de lire les données du tableau. Vérifiez la publication sur le web.</span>";
-                return;
-            }
+            const data = await response.text();
+            const lignes = data.split(/\r?\n/);
 
             let correspondances = [];
 
-            // i = 1 pour sauter la première ligne des en-têtes génériques
             for(let i = 1; i < lignes.length; i++) {
-                let ligneActuelle = lignes[i];
+                let ligneActuelle = lignes[i].trim();
+                if (!ligneActuelle) continue;
+
+                // Détection dynamique du séparateur (souvent ; en France, parfois ,)
+                const separateur = ligneActuelle.includes(';') ? ';' : ',';
+                const colonnes = parseCSVLine(ligneActuelle, separateur);
                 
-                // Extraction stricte par position dans le tableau officiel
-                let nExcel = ligneActuelle[4] ? ligneActuelle[4].trim() : ""; // Colonne E
-                let pExcel = ligneActuelle[5] ? ligneActuelle[5].trim() : ""; // Colonne F
-                let tExcel = ligneActuelle[10] ? ligneActuelle[10].trim() : ""; // Colonne K
+                // Positionnement exact (Index informatique : E=4, F=5, K=10)
+                let nExcel = colonnes[4] || ""; 
+                let pExcel = colonnes[5] || ""; 
+                let tExcel = colonnes[10] || ""; 
 
                 if (!nExcel || !pExcel) continue;
 
@@ -123,7 +141,7 @@
                     </div>`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
@@ -136,7 +154,7 @@
 
         } catch (error) {
             console.error(error);
-            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur lors de la connexion sécurisée. Vérifiez la clé API et la publication du fichier.</span>";
+            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur d'accès au tableau. Assurez-vous qu'il est bien \"Publié sur le web\".</span>";
         }
     }
 </script>
