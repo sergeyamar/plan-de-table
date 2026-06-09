@@ -49,7 +49,6 @@
         return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
     }
 
-    // Fonction de découpage robuste pour le CSV
     function parseCSVLine(text, separator) {
         let columns = [];
         let curVal = "";
@@ -95,24 +94,28 @@
                 let ligneTexte = lignes[i].trim();
                 if (!ligneTexte) continue;
 
-                // On crée une version nettoyée pour la recherche
-                let ligneNettoye = ligneTexte.toLowerCase().replace(/["']/g, '');
+                const separateur = ligneTexte.includes(';') ? ';' : ',';
+                const colonnes = parseCSVLine(ligneTexte, separateur);
+                
+                // Récupération et nettoyage des valeurs du tableau officiel
+                let nomExcel = colonnes[4] ? colonnes[4].replace(/["']/g, '').trim() : "";
+                let prenomExcel = colonnes[5] ? colonnes[5].replace(/["']/g, '').trim() : "";
+                let tableTrouvee = colonnes[10] ? colonnes[10].replace(/["']/g, '').trim() : "";
 
-                let contientPrenom = prenomSaisi ? ligneNettoye.includes(prenomSaisi) : true;
-                let contientNom = nomSaisi ? ligneNettoye.includes(nomSaisi) : true;
+                // Si l'invité n'a pas de table définie (cellule vide), on l'ignore
+                if (!tableTrouvee || tableTrouvee.toLowerCase() === "undefined" || tableTrouvee === "") {
+                    continue;
+                }
 
-                if (contientPrenom && contientNom) {
-                    const separateur = ligneTexte.includes(';') ? ';' : ',';
-                    const colonnes = parseCSVLine(ligneTexte, separateur);
-                    
-                    // On cible TRÈS précisément la colonne K (Index informatique 10)
-                    let tableTrouvee = colonnes[10] ? colonnes[10].replace(/["']/g, '').trim() : "Non définie";
-                    
-                    // Récupération des vrais prénoms/noms dans les colonnes E et F pour un affichage propre
-                    let nomAffichage = colonnes[4] ? colonnes[4].replace(/["']/g, '').trim() : nomSaisi;
-                    let prenomAffichage = colonnes[5] ? colonnes[5].replace(/["']/g, '').trim() : prenomSaisi;
+                let nomExcelNettoye = nettoyerTexte(nomExcel);
+                let prenomExcelNettoye = nettoyerTexte(prenomExcel);
 
-                    correspondances.push({ prenom: prenomAffichage, nom: nomAffichage, table: tableTrouvee });
+                // Vérification stricte des critères de recherche
+                let matchPrenom = prenomSaisi ? (prenomExcelNettoye === prenomSaisi) : true;
+                let matchNom = nomSaisi ? (nomExcelNettoye === nomSaisi || nomExcelNettoye.includes(nomSaisi)) : true;
+
+                if (matchPrenom && matchNom) {
+                    correspondances.push({ prenom: prenomExcel, nom: nomExcel, table: tableTrouvee });
                 }
             }
 
