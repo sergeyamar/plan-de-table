@@ -81,7 +81,9 @@
 
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
-        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv`;
+        // L'astuce anti-cache : on génère un numéro unique basé sur l'heure actuelle (ex: &t=1717758291000)
+        const cacheBuster = new Date().getTime();
+        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&t=${cacheBuster}`;
 
         try {
             const response = await fetch(url);
@@ -97,12 +99,10 @@
                 const separateur = ligneTexte.includes(';') ? ';' : ',';
                 const colonnes = parseCSVLine(ligneTexte, separateur);
                 
-                // Récupération et nettoyage des valeurs du tableau officiel
                 let nomExcel = colonnes[4] ? colonnes[4].replace(/["']/g, '').trim() : "";
                 let prenomExcel = colonnes[5] ? colonnes[5].replace(/["']/g, '').trim() : "";
                 let tableTrouvee = colonnes[10] ? colonnes[10].replace(/["']/g, '').trim() : "";
 
-                // Si l'invité n'a pas de table définie (cellule vide), on l'ignore
                 if (!tableTrouvee || tableTrouvee.toLowerCase() === "undefined" || tableTrouvee === "") {
                     continue;
                 }
@@ -110,7 +110,6 @@
                 let nomExcelNettoye = nettoyerTexte(nomExcel);
                 let prenomExcelNettoye = nettoyerTexte(prenomExcel);
 
-                // Vérification stricte des critères de recherche
                 let matchPrenom = prenomSaisi ? (prenomExcelNettoye === prenomSaisi) : true;
                 let matchNom = nomSaisi ? (nomExcelNettoye === nomSaisi || nomExcelNettoye.includes(nomSaisi)) : true;
 
@@ -119,7 +118,6 @@
                 }
             }
 
-            // --- AFFICHAGE DES RÉSULTATS ---
             if (correspondances.length === 0) {
                 divResultat.innerHTML = "<div style='text-align:center;'>❌ Aucun invité trouvé. / Nessun ospite trovato.</div>";
             } 
