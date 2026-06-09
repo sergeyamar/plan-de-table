@@ -66,16 +66,17 @@
         });
     }
 
-    function parseCSVLine(text, separator) {
+    // Découpeur de ligne CSV standardisé et ultra-fiable
+    function parseCSVLine(text) {
         let columns = [];
         let curVal = "";
         let inQuotes = false;
         
         for (let i = 0; i < text.length; i++) {
             let char = text[i];
-            if (char === '"' || char === "'") {
-                inQuotes = !inQuotes;
-            } else if (char === separator && !inQuotes) {
+            if (char === '"') {
+                inQuotes = !inQuotes; // On ignore les virgules si on est entre guillemets
+            } else if (char === ',' && !inQuotes) {
                 columns.push(curVal.trim());
                 curVal = "";
             } else {
@@ -99,6 +100,7 @@
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
         const cacheBuster = new Date().getTime();
+        // On force l'export en CSV avec la virgule comme séparateur standard
         const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&t=${cacheBuster}`;
 
         try {
@@ -106,30 +108,10 @@
             const data = await response.text();
             const lignes = data.split(/\r?\n/);
             
-            if (lignes.length < 2) {
-                divResultat.innerHTML = "<div style='text-align:center;'>❌ Fichier vide.</div>";
-                return;
-            }
-
-            // --- REPÉRAGE DYNAMIQUE DES COLONNES ---
-            const separateurEnTete = lignes[0].includes(';') ? ';' : ',';
-            const colonnesEnTete = parseCSVLine(lignes[0], separateurEnTete);
-            
-            let indexNom = -1;
-            let indexPrenom = -1;
-            let indexTable = -1;
-
-            for (let idx = 0; idx < colonnesEnTete.length; idx++) {
-                let titre = colonnesEnTete[idx].toLowerCase().replace(/["']/g, '').trim();
-                if (titre.includes('nom') && !titre.includes('table')) indexNom = idx;
-                if (titre.includes('prénom') || titre.includes('prenom')) indexPrenom = idx;
-                if (titre.includes('table')) indexTable = idx;
-            }
-
-            // Sécurité au cas où les noms de colonnes changeraient un jour
-            if (indexNom === -1) indexNom = 4;
-            if (indexPrenom === -1) indexPrenom = 5;
-            if (indexTable === -1) indexTable = 10;
+            // Index fixes et vérifiés sur votre fichier d'origine
+            const indexNom = 4;    // Colonne E
+            const indexPrenom = 5; // Colonne F
+            const indexTable = 10; // Colonne K
             
             let correspondances = [];
             let tousLesInvites = [];
@@ -138,13 +120,19 @@
                 let ligneTexte = lignes[i].trim();
                 if (!ligneTexte) continue;
 
-                const separateur = ligneTexte.includes(';') ? ';' : ',';
-                const colonnes = parseCSVLine(ligneTexte, separateur);
+                // On utilise le découpeur standardisé à la virgule
+                const colonnes = parseCSVLine(ligneTexte);
                 
-                let nomExcel = colonnes[indexNom] ? colonnes[indexNom].replace(/["']/g, '').trim() : "";
-                let prenomExcel = colonnes[indexPrenom] ? colonnes[indexPrenom].replace(/["']/g, '').trim() : "";
-                let tableTrouvee = colonnes[indexTable] ? colonnes[indexTable].replace(/["']/g, '').trim() : "";
+                let nomExcel = colonnes[indexNom] ? colonnes[indexNom].trim() : "";
+                let prenomExcel = colonnes[indexPrenom] ? colonnes[indexPrenom].trim() : "";
+                let tableTrouvee = colonnes[indexTable] ? colonnes[indexTable].trim() : "";
 
+                // Si la ligne est corrompue ou trop courte, on passe
+                if (colonnes.length <= indexTable) {
+                    continue;
+                }
+
+                // Si l'invité n'a pas de table définie, on l'ignore
                 if (!tableTrouvee || tableTrouvee.toLowerCase() === "undefined" || tableTrouvee === "") {
                     continue;
                 }
@@ -200,7 +188,7 @@
                     ${htmlCompagnons}`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
