@@ -54,13 +54,11 @@
         return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
     }
 
-    // Fonction d'harmonisation du Nom (Tout en majuscules)
     function harmoniserNom(nom) {
         if (!nom) return "";
         return nom.toUpperCase().trim();
     }
 
-    // Fonction d'harmonisation du Prénom (Première lettre en majuscule, reste en minuscules)
     function harmoniserPrenom(prenom) {
         if (!prenom) return "";
         return prenom.trim().toLowerCase().replace(/(?:^|\s|-)\S/g, function(a) {
@@ -108,6 +106,31 @@
             const data = await response.text();
             const lignes = data.split(/\r?\n/);
             
+            if (lignes.length < 2) {
+                divResultat.innerHTML = "<div style='text-align:center;'>❌ Fichier vide.</div>";
+                return;
+            }
+
+            // --- REPÉRAGE DYNAMIQUE DES COLONNES ---
+            const separateurEnTete = lignes[0].includes(';') ? ';' : ',';
+            const colonnesEnTete = parseCSVLine(lignes[0], separateurEnTete);
+            
+            let indexNom = -1;
+            let indexPrenom = -1;
+            let indexTable = -1;
+
+            for (let idx = 0; idx < colonnesEnTete.length; idx++) {
+                let titre = colonnesEnTete[idx].toLowerCase().replace(/["']/g, '').trim();
+                if (titre.includes('nom') && !titre.includes('table')) indexNom = idx;
+                if (titre.includes('prénom') || titre.includes('prenom')) indexPrenom = idx;
+                if (titre.includes('table')) indexTable = idx;
+            }
+
+            // Sécurité au cas où les noms de colonnes changeraient un jour
+            if (indexNom === -1) indexNom = 4;
+            if (indexPrenom === -1) indexPrenom = 5;
+            if (indexTable === -1) indexTable = 10;
+            
             let correspondances = [];
             let tousLesInvites = [];
 
@@ -118,9 +141,9 @@
                 const separateur = ligneTexte.includes(';') ? ';' : ',';
                 const colonnes = parseCSVLine(ligneTexte, separateur);
                 
-                let nomExcel = colonnes[4] ? colonnes[4].replace(/["']/g, '').trim() : "";
-                let prenomExcel = colonnes[5] ? colonnes[5].replace(/["']/g, '').trim() : "";
-                let tableTrouvee = colonnes[10] ? colonnes[10].replace(/["']/g, '').trim() : "";
+                let nomExcel = colonnes[indexNom] ? colonnes[indexNom].replace(/["']/g, '').trim() : "";
+                let prenomExcel = colonnes[indexPrenom] ? colonnes[indexPrenom].replace(/["']/g, '').trim() : "";
+                let tableTrouvee = colonnes[indexTable] ? colonnes[indexTable].replace(/["']/g, '').trim() : "";
 
                 if (!tableTrouvee || tableTrouvee.toLowerCase() === "undefined" || tableTrouvee === "") {
                     continue;
@@ -129,7 +152,6 @@
                 let nomExcelNettoye = nettoyerTexte(nomExcel);
                 let prenomExcelNettoye = nettoyerTexte(prenomExcel);
 
-                // On applique directement l'harmonisation demandée
                 let nomPropre = harmoniserNom(nomExcel);
                 let prenomPropre = harmoniserPrenom(prenomExcel);
 
