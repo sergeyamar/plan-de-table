@@ -18,8 +18,6 @@
         .single-match { text-align: center; font-family: 'Georgia', serif; font-size: 22px; }
         .table-name { color: #d4af37; font-size: 26px; display: block; margin-top: 5px; font-weight: bold; }
         .loading { font-size: 14px; color: #8a8a8a; text-align: center; display: block; margin-top: 10px; }
-        
-        /* Style pour l'affichage de listes multiples */
         .match-item { background: #fdfbf7; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #d4af37; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .match-name { font-weight: bold; color: #4a4a4a; }
         .match-table { color: #aa8c2c; font-style: italic; font-size: 15px; }
@@ -41,13 +39,14 @@
 </div>
 
 <script>
+    // Configuration de vos identifiants officiels
     const GOOGLE_SHEETS_ID = "1oMpUNFcGBVIGvh8FdXMAyaVMXiI6Is7t1DWOuJiP6vQ";
+    const API_KEY = "AQ.Ab8RN6I__C8BxERsNYCFtNDMAkHAhtCJLmoQZ18314TksyXwlw";
     const GOOGLE_DRIVE_PHOTO_ID = "1q9Brj02X1sijVFzOFro60M6gu1a9oJO-";
 
-    // Chargement de la photo de couple
+    // Chargement de la photo
     document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
 
-    // Fonction de nettoyage des saisies (minuscules, sans espaces)
     function nettoyerTexte(texte) {
         if (!texte) return "";
         return texte.toLowerCase().trim().replace(/\s+/g, '');
@@ -65,36 +64,34 @@
 
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
-        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv`;
+        // Requête API ciblant la plage globale du tableau (de A à K)
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_ID}/values/A:K?key=${API_KEY}`;
 
         try {
             const response = await fetch(url);
-            const data = await response.text();
-            
-            // Séparation par ligne
-            const lignes = data.split(/\r?\n/);
+            const json = await response.json();
+            const lignes = json.values;
+
+            if (!lignes || lignes.length === 0) {
+                divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Impossible de lire les données du tableau. Vérifiez la publication sur le web.</span>";
+                return;
+            }
+
             let correspondances = [];
 
-            // Parcours à partir de la ligne 2 (index 1) pour ignorer les en-têtes génériques
+            // i = 1 pour sauter la première ligne des en-têtes génériques
             for(let i = 1; i < lignes.length; i++) {
-                let ligneTexte = lignes[i].trim();
-                if (!ligneTexte) continue;
-
-                // Forçage du séparateur français (point-virgule) ou repli sur la virgule
-                const separateur = ligneTexte.includes(';') ? ';' : ',';
+                let ligneActuelle = lignes[i];
                 
-                // Découpage des colonnes
-                const colonnes = ligneTexte.split(separateur);
-                
-                // Nettoyage complet des guillemets encadrant parfois les textes dans le CSV
-                let nExcel = colonnes[4] ? colonnes[4].replace(/^["']|["']$/g, '').trim() : ""; // Colonne E
-                let pExcel = colonnes[5] ? colonnes[5].replace(/^["']|["']$/g, '').trim() : ""; // Colonne F
-                let tExcel = colonnes[10] ? colonnes[10].replace(/^["']|["']$/g, '').trim() : ""; // Colonne K
+                // Extraction stricte par position dans le tableau officiel
+                let nExcel = ligneActuelle[4] ? ligneActuelle[4].trim() : ""; // Colonne E
+                let pExcel = ligneActuelle[5] ? ligneActuelle[5].trim() : ""; // Colonne F
+                let tExcel = ligneActuelle[10] ? ligneActuelle[10].trim() : ""; // Colonne K
 
                 if (!nExcel || !pExcel) continue;
 
                 let pExcelNettoye = nettoyerTexte(pExcel);
-                let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); // Enlève aussi les tirets pour la recherche
+                let nExcelNettoye = nettoyerTexte(nExcel).replace(/-/g, ''); 
                 
                 let matchPrenom = (prenomSaisi === pExcelNettoye);
                 let matchNom = (nomSaisi === nExcelNettoye || nExcelNettoye.includes(nomSaisi));
@@ -139,7 +136,7 @@
 
         } catch (error) {
             console.error(error);
-            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur lors de la connexion au fichier Excel. Vérifiez le partage du lien.</span>";
+            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur lors de la connexion sécurisée. Vérifiez la clé API et la publication du fichier.</span>";
         }
     }
 </script>
