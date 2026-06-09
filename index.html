@@ -16,12 +16,17 @@
         button:hover { background-color: #aa8c2c; }
         .result { margin-top: 25px; font-size: 18px; color: #333; text-align: left; }
         .single-match { text-align: center; font-family: 'Georgia', serif; font-size: 22px; }
-        .table-name { color: #d4af37; font-size: 26px; display: block; margin-top: 5px; font-weight: bold; }
+        .table-name { color: #d4af37; font-size: 26px; display: block; margin-top: 5px; font-weight: bold; margin-bottom: 15px; }
         .loading { font-size: 14px; color: #8a8a8a; text-align: center; display: block; margin-top: 10px; }
         .match-item { background: #fdfbf7; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #d4af37; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .match-name { font-weight: bold; color: #4a4a4a; }
         .match-table { color: #aa8c2c; font-style: italic; font-size: 15px; }
         .multi-title { font-size: 16px; color: #666; margin-bottom: 10px; font-style: italic; text-align: center; }
+        
+        /* Styles pour les compagnons de table */
+        .guests-together { margin-top: 20px; border-top: 1px dashed #ddd; padding-top: 15px; text-align: left; }
+        .guests-together-title { font-size: 15px; font-weight: bold; color: #555; text-align: center; margin-bottom: 10px; font-family: sans-serif; }
+        .guest-chip { display: inline-block; background: #f1ede4; color: #555; padding: 6px 12px; margin: 4px; border-radius: 20px; font-size: 14px; font-family: sans-serif; }
     </style>
 </head>
 <body>
@@ -32,8 +37,8 @@
     
     <img class="couple-photo" id="photo-couple" src="" alt="Notre Couple">
 
-    <input type="text" id="search-firstname" placeholder="Votre Prénom / Nome">
     <input type="text" id="search-lastname" placeholder="Votre Nom / Cognome">
+    <input type="text" id="search-firstname" placeholder="Votre Prénom / Nome">
     <button onclick="rechercherTable()">Rechercher ma table / Cerca il mio tavolo</button>
     <div class="result" id="resultat"></div>
 </div>
@@ -47,6 +52,20 @@
     function nettoyerTexte(texte) {
         if (!texte) return "";
         return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
+    }
+
+    // Fonction d'harmonisation du Nom (Tout en majuscules)
+    function harmoniserNom(nom) {
+        if (!nom) return "";
+        return nom.toUpperCase().trim();
+    }
+
+    // Fonction d'harmonisation du Prénom (Première lettre en majuscule, reste en minuscules)
+    function harmoniserPrenom(prenom) {
+        if (!prenom) return "";
+        return prenom.trim().toLowerCase().replace(/(?:^|\s|-)\S/g, function(a) {
+            return a.toUpperCase();
+        });
     }
 
     function parseCSVLine(text, separator) {
@@ -75,13 +94,12 @@
         const divResultat = document.getElementById('resultat');
         
         if(!prenomSaisi && !nomSaisi) {
-            divResultat.innerHTML = "<div style='color:#e74c3c; font-size:16px; text-align:center;'>Veuillez entrer un prénom ou un nom. / Per favore, inserisci un nome o un cognome.</div>";
+            divResultat.innerHTML = "<div style='color:#e74c3c; font-size:16px; text-align:center;'>Veuillez entrer un nom ou un prénom. / Per favore, inserisci un cognome o un nome.</div>";
             return;
         }
 
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
-        // L'astuce anti-cache : on génère un numéro unique basé sur l'heure actuelle (ex: &t=1717758291000)
         const cacheBuster = new Date().getTime();
         const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&t=${cacheBuster}`;
 
@@ -91,6 +109,7 @@
             const lignes = data.split(/\r?\n/);
             
             let correspondances = [];
+            let tousLesInvites = [];
 
             for(let i = 1; i < lignes.length; i++) {
                 let ligneTexte = lignes[i].trim();
@@ -110,11 +129,17 @@
                 let nomExcelNettoye = nettoyerTexte(nomExcel);
                 let prenomExcelNettoye = nettoyerTexte(prenomExcel);
 
+                // On applique directement l'harmonisation demandée
+                let nomPropre = harmoniserNom(nomExcel);
+                let prenomPropre = harmoniserPrenom(prenomExcel);
+
+                tousLesInvites.push({ prenom: prenomPropre, nom: nomPropre, table: tableTrouvee, pNettoye: prenomExcelNettoye, nNettoye: nomExcelNettoye });
+
                 let matchPrenom = prenomSaisi ? (prenomExcelNettoye === prenomSaisi) : true;
                 let matchNom = nomSaisi ? (nomExcelNettoye === nomSaisi || nomExcelNettoye.includes(nomSaisi)) : true;
 
                 if (matchPrenom && matchNom) {
-                    correspondances.push({ prenom: prenomExcel, nom: nomExcel, table: tableTrouvee });
+                    correspondances.push({ prenom: prenomPropre, nom: nomPropre, table: tableTrouvee, pNettoye: prenomExcelNettoye, nNettoye: nomExcelNettoye });
                 }
             }
 
@@ -122,18 +147,42 @@
                 divResultat.innerHTML = "<div style='text-align:center;'>❌ Aucun invité trouvé. / Nessun ospite trovato.</div>";
             } 
             else if (correspondances.length === 1) {
+                let cible = correspondances[0];
+                
+                let compagnons = tousLesInvites.filter(inv => 
+                    inv.table === cible.table && 
+                    !(inv.pNettoye === cible.pNettoye && inv.nNettoye === cible.nNettoye)
+                );
+
+                let htmlCompagnons = "";
+                if (compagnons.length > 0) {
+                    htmlCompagnons = `
+                        <div class="guests-together">
+                            <div class="guests-together-title">
+                                Vous êtes à la même table que :<br>
+                                <span style="font-style: italic; font-weight: normal; color: #888; font-size: 13px;">Siete al tavolo con :</span>
+                            </div>
+                            <div style="text-align: center;">
+                    `;
+                    compagnons.forEach(c => {
+                        htmlCompagnons += `<span class="guest-chip">${c.nom} ${c.prenom}</span>`;
+                    });
+                    htmlCompagnons += `</div></div>`;
+                }
+
                 divResultat.innerHTML = `
                     <div class="single-match">
-                        ✨ ${correspondances[0].prenom} ${correspondances[0].nom},<br> vous êtes à la : / siete au :
-                        <span class="table-name">${correspondances[0].table}</span>
-                    </div>`;
+                        ✨ ${cible.nom} ${cible.prenom},<br> vous êtes à la : / siete al :
+                        <span class="table-name">${cible.table}</span>
+                    </div>
+                    ${htmlCompagnons}`;
             } 
             else {
                 let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
-                            <span class="match-name">${invite.prenom} ${invite.nom}</span>
+                            <span class="match-name">${invite.nom} ${invite.prenom}</span>
                             <span class="match-table">➔ ${invite.table}</span>
                         </div>`;
                 });
