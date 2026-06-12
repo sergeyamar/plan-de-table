@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Balises Anti-Cache : Force le navigateur à recharger le site à chaque visite -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -55,9 +54,10 @@
 
     document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
 
+    // Correction de la variable "texte" pour éviter le blocage du bouton
     function nettoyerTexte(texte) {
         if (!texte) return "";
-        return text.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
+        return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
     }
 
     function harmoniserNom(nom) {
@@ -105,7 +105,8 @@
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
         const cacheBuster = new Date().getTime();
-        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&t=${cacheBuster}`;
+        // URL nettoyée de manière stricte pour l'export au format CSV direct
+        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&gid=0&t=${cacheBuster}`;
 
         try {
             const response = await fetch(url);
