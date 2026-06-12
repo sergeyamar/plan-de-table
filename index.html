@@ -26,7 +26,7 @@
         .loading { font-size: 14px; color: #8a8a8a; text-align: center; display: block; margin-top: 10px; }
         .match-item { background: #fdfbf7; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #d4af37; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .match-name { font-weight: bold; color: #4a4a4a; }
-        .match-table { color: #aa8c2c; font-style: italic; font-size: 15px; }
+        .match-table { color: #aa8c2c; font-style: italic; font-size: 15px; text-align: right; }
         .multi-title { font-size: 16px; color: #666; margin-bottom: 10px; font-style: italic; text-align: center; }
         
         /* Styles pour les compagnons de table */
@@ -57,7 +57,7 @@
 
     function nettoyerTexte(texte) {
         if (!texte) return "";
-        return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
+        return text.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
     }
 
     function harmoniserNom(nom) {
@@ -182,7 +182,7 @@
 
                 divResultat.innerHTML = `
                     <div class="single-match">
-                        ✨ ${cible.nom} ${cible.prenom},<br> vous êtes à la : / siete al :
+                        ✨ ${cible.nom} ${cible.prenom},<br> vous êtes à la table : / siete al tavolo :
                         <span class="table-name">${cible.table}</span>
                     </div>
                     ${htmlCompagnons}`;
@@ -193,7 +193,7 @@
                     htmlListe += `
                         <div class="match-item">
                             <span class="match-name">${invite.nom} ${invite.prenom}</span>
-                            <span class="match-table">➔ ${invite.table}</span>
+                            <span class="match-table">➔ Table : ${invite.table} / Tavolo : ${invite.table}</span>
                         </div>`;
                 });
                 divResultat.innerHTML = htmlListe;
