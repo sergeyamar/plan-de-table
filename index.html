@@ -54,7 +54,6 @@
 
     document.getElementById('photo-couple').src = `https://drive.google.com/thumbnail?sz=w1000&id=${GOOGLE_DRIVE_PHOTO_ID}`;
 
-    // Correction de la variable "texte" pour éviter le blocage du bouton
     function nettoyerTexte(texte) {
         if (!texte) return "";
         return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
@@ -105,8 +104,8 @@
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
         const cacheBuster = new Date().getTime();
-        // URL nettoyée de manière stricte pour l'export au format CSV direct
-        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&gid=0&t=${cacheBuster}`;
+        // Modification de la structure de l'URL pour un export direct sans redirection de sécurité Google
+        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/pub?output=csv&t=${cacheBuster}`;
 
         try {
             const response = await fetch(url);
