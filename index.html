@@ -104,11 +104,13 @@
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
         const cacheBuster = new Date().getTime();
-        // Modification de la structure de l'URL pour un export direct sans redirection de sécurité Google
-        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/pub?output=csv&t=${cacheBuster}`;
+        // URL d'export direct épurée pour éviter les erreurs d'accès (CORS) et les redirections de sécurité Google
+        const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&id=${GOOGLE_SHEETS_ID}&v=${cacheBuster}`;
 
         try {
             const response = await fetch(url);
+            if (!response.ok) throw new Error('Erreur HTTP ' + response.status);
+            
             const data = await response.text();
             const lignes = data.split(/\r?\n/);
             
@@ -188,7 +190,7 @@
                     ${htmlCompagnons}`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
@@ -201,7 +203,7 @@
 
         } catch (error) {
             console.error(error);
-            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur d'accès au fichier.</span>";
+            divResultat.innerHTML = "<span style='color:#e74c3c; font-size:16px;'>Erreur d'accès au fichier. / Errore di accesso al file.</span>";
         }
     }
 </script>
