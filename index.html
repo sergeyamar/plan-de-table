@@ -126,17 +126,13 @@
 
                 const colonnes = parseCSVLine(ligneTexte);
                 
-                let nomExcel = colonnes[indexNom] ? colonnes[indexNom].trim() : "";
-                let prenomExcel = colonnes[indexPrenom] ? colonnes[indexPrenom].trim() : "";
-                let tableTrouvee = colonnes[indexTable] ? colonnes[indexTable].trim() : "";
-
                 if (colonnes.length <= indexTable) {
                     continue;
                 }
 
-                if (!tableTrouvee || tableTrouvee.toLowerCase() === "undefined" || tableTrouvee === "") {
-                    continue;
-                }
+                let nomExcel = colonnes[indexNom] ? colonnes[indexNom].trim() : "";
+                let prenomExcel = colonnes[indexPrenom] ? colonnes[indexPrenom].trim() : "";
+                let tableTrouvee = colonnes[indexTable] ? colonnes[indexTable].trim() : "";
 
                 let nomExcelNettoye = nettoyerTexte(nomExcel);
                 let prenomExcelNettoye = nettoyerTexte(prenomExcel);
@@ -144,6 +140,7 @@
                 let nomPropre = harmoniserNom(nomExcel);
                 let prenomPropre = harmoniserPrenom(prenomExcel);
 
+                // On stocke tous les invités, même si la table n'est pas encore définie
                 tousLesInvites.push({ prenom: prenomPropre, nom: nomPropre, table: tableTrouvee, pNettoye: prenomExcelNettoye, nNettoye: nomExcelNettoye });
 
                 let matchPrenom = prenomSaisi ? (prenomExcelNettoye === prenomSaisi) : true;
@@ -155,46 +152,61 @@
             }
 
             if (correspondances.length === 0) {
+                // Cas 1 : L'invité n'est pas du tout dans le fichier Excel
                 divResultat.innerHTML = "<div style='text-align:center;'>❌ Aucun invité trouvé. / Nessun ospite trovato.</div>";
             } 
             else if (correspondances.length === 1) {
                 let cible = correspondances[0];
                 
-                let compagnons = tousLesInvites.filter(inv => 
-                    inv.table === cible.table && 
-                    !(inv.pNettoye === cible.pNettoye && inv.nNettoye === cible.nNettoye)
-                );
+                // Vérification si la table est vide ou non définie
+                if (!cible.table || cible.table.toLowerCase() === "undefined" || cible.table === "") {
+                    divResultat.innerHTML = `
+                        <div class="single-match">
+                            ➔ ${cible.nom} ${cible.prenom},<br> Table non encore définie. / Tavolo non ancora definito.
+                        </div>`;
+                } else {
+                    let compagnons = tousLesInvites.filter(inv => 
+                        inv.table === cible.table && 
+                        inv.table !== "" &&
+                        inv.table.toLowerCase() !== "undefined" &&
+                        !(inv.pNettoye === cible.pNettoye && inv.nNettoye === cible.nNettoye)
+                    );
 
-                let htmlCompagnons = "";
-                if (compagnons.length > 0) {
-                    htmlCompagnons = `
-                        <div class="guests-together">
-                            <div class="guests-together-title">
-                                Vous êtes à la même table que :<br>
-                                Siete al tavolo con :
-                            </div>
-                            <div style="text-align: center;">
-                    `;
-                    compagnons.forEach(c => {
-                        htmlCompagnons += `<span class="guest-chip">${c.nom} ${c.prenom}</span>`;
-                    });
-                    htmlCompagnons += `</div></div>`;
+                    let htmlCompagnons = "";
+                    if (compagnons.length > 0) {
+                        htmlCompagnons = `
+                            <div class="guests-together">
+                                <div class="guests-together-title">
+                                    Vous êtes à la même table que :<br>
+                                    Siete al tavolo con :
+                                </div>
+                                <div style="text-align: center;">
+                        `;
+                        compagnons.forEach(c => {
+                            htmlCompagnons += `<span class="guest-chip">${c.nom} ${c.prenom}</span>`;
+                        });
+                        htmlCompagnons += `</div></div>`;
+                    }
+
+                    divResultat.innerHTML = `
+                        <div class="single-match">
+                            ✨ ${cible.nom} ${cible.prenom},<br> vous êtes à la table : / siete al tavolo :
+                            <span class="table-name">${cible.table}</span>
+                        </div>
+                        ${htmlCompagnons}`;
                 }
-
-                divResultat.innerHTML = `
-                    <div class="single-match">
-                        ✨ ${cible.nom} ${cible.prenom},<br> vous êtes à la table : / siete al tavolo :
-                        <span class="table-name">${cible.table}</span>
-                    </div>
-                    ${htmlCompagnons}`;
             } 
             else {
                 let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
                 correspondances.forEach(invite => {
+                    let affichageTable = invite.table;
+                    if (!affichageTable || affichageTable.toLowerCase() === "undefined" || affichageTable === "") {
+                        affichageTable = "Non encore définie / Non ancora definito";
+                    }
                     htmlListe += `
                         <div class="match-item">
                             <span class="match-name">${invite.nom} ${invite.prenom}</span>
-                            <span class="match-table">➔ ${invite.table}</span>
+                            <span class="match-table">➔ ${affichageTable}</span>
                         </div>`;
                 });
                 divResultat.innerHTML = htmlListe;
