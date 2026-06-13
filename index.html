@@ -104,7 +104,6 @@
         divResultat.innerHTML = "<span class='loading'>Recherche en cours... / Ricerca in corso...</span>";
 
         const cacheBuster = new Date().getTime();
-        // URL d'export direct épurée pour éviter les erreurs d'accès (CORS) et les redirections de sécurité Google
         const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&id=${GOOGLE_SHEETS_ID}&v=${cacheBuster}`;
 
         try {
@@ -190,12 +189,12 @@
                     ${htmlCompagnons}`;
             } 
             else {
-                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trouvate :</div>`;
+                let htmlListe = `<div class="multi-title">💬 Plusieurs correspondances trouvées : / Più corrispondenze trovate :</div>`;
                 correspondances.forEach(invite => {
                     htmlListe += `
                         <div class="match-item">
                             <span class="match-name">${invite.nom} ${invite.prenom}</span>
-                            <span class="match-table">➔ Table : ${invite.table} / Tavolo : ${invite.table}</span>
+                            <span class="match-table">➔ ${invite.table}</span>
                         </div>`;
                 });
                 divResultat.innerHTML = htmlListe;
