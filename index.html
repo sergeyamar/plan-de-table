@@ -56,7 +56,7 @@
 
     function nettoyerTexte(texte) {
         if (!texte) return "";
-        return texte.toLowerCase().trim().replace(/\s+/g, '').replace(/-/g, '');
+        return texte.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, '').replace(/-/g, '');
     }
 
     function harmoniserNom(nom) {
